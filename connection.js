@@ -14,6 +14,7 @@ if (!connectionString) {
   return;
 }
 
+
 // Choose a safe SSL option: disable for localhost, enable (but permissive) otherwise.
 let sslOption = { rejectUnauthorized: false };
 if (/localhost|127\.0\.0\.1/.test(connectionString)) {
