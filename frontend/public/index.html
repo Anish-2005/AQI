@@ -5,27 +5,116 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>AQI API — Frontend</title>
     <style>
-      body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#ffffff;color:#111;margin:32px}
-      header{margin-bottom:18px}
-      a{color:#0366d6}
-      code{background:#f3f4f6;padding:2px 6px;border-radius:4px}
+      :root{--bg:#f7fafc;--card:#fff;--muted:#6b7280;--accent:#0ea5e9}
+      body{font-family:system-ui,Segoe UI,Roboto,Arial,Helvetica,sans-serif;background:var(--bg);color:#0f172a;margin:24px}
+      .container{max-width:980px;margin:0 auto}
+      header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+      h1{margin:0;font-size:20px}
+      .card{background:var(--card);padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(15,23,42,0.06);margin-bottom:12px}
+      .muted{color:var(--muted)}
+      table{width:100%;border-collapse:collapse}
+      th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left}
+      .row{display:flex;gap:12px;align-items:center}
+      .pill{background:#eefbf8;color:#065f46;padding:6px 8px;border-radius:999px;font-size:13px}
+      button{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
+      pre{white-space:pre-wrap;margin:0}
     </style>
   </head>
   <body>
-    <header>
-      <h1>AQI API</h1>
-      <p>Simple placeholder frontend for the AQI API server.</p>
-    </header>
-    <section>
-      <h2>Endpoints</h2>
-      <ul>
-        <li><a href="/api/health">GET /api/health</a> — server health</li>
-        <li><a href="/api/aqidata">GET /api/aqidata</a> — all AQI records</li>
-        <li><a href="/api/stats">GET /api/stats</a> — basic stats</li>
-      </ul>
-    </section>
-    <footer>
-      <p>Generated fallback — replace with your real frontend build in <code>frontend/public</code>.</p>
-    </footer>
+    <div class="container">
+      <header>
+        <div>
+          <h1>AQI API — Frontend</h1>
+          <div class="muted">A lightweight frontend that queries the API endpoints.</div>
+        </div>
+        <div class="row">
+          <button id="refresh">Refresh</button>
+        </div>
+      </header>
+
+      <section class="card" id="healthCard">
+        <strong>Health</strong>
+        <div id="health" class="muted">Loading...</div>
+      </section>
+
+      <section class="card">
+        <strong>Stats</strong>
+        <div id="stats" class="muted">Loading...</div>
+      </section>
+
+      <section class="card">
+        <strong>AQI Data</strong>
+        <div id="aqiContainer" class="muted">Loading...</div>
+      </section>
+
+      <footer class="muted">This is a minimal frontend. Replace with your build if desired.</footer>
+    </div>
+
+    <script>
+      async function fetchJson(path){
+        try{
+          const res = await fetch(path, {cache: 'no-store'});
+          if(!res.ok) throw new Error(res.status + ' ' + res.statusText);
+          return await res.json();
+        }catch(e){
+          return {__error: e.message};
+        }
+      }
+
+      function renderHealth(data){
+        const el = document.getElementById('health');
+        if(data && data.__error) el.textContent = 'Error: ' + data.__error;
+        else el.innerHTML = data && data.status ? `<span class="pill">${data.status}</span>` : JSON.stringify(data);
+      }
+
+      function renderStats(data){
+        const el = document.getElementById('stats');
+        if(data && data.__error) el.textContent = 'Error: ' + data.__error;
+        else if(typeof data === 'object'){
+          el.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        }else el.textContent = String(data);
+      }
+
+      function renderAqi(data){
+        const el = document.getElementById('aqiContainer');
+        if(data && data.__error) return el.textContent = 'Error: ' + data.__error;
+        if(!Array.isArray(data)) return el.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        if(data.length === 0) return el.textContent = 'No AQI records.';
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        const keys = Object.keys(data[0]);
+        keys.forEach(k => { const th = document.createElement('th'); th.textContent = k; headerRow.appendChild(th); });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        data.forEach(row => {
+          const tr = document.createElement('tr');
+          keys.forEach(k => { const td = document.createElement('td'); td.textContent = row[k]; tr.appendChild(td); });
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        el.innerHTML = '';
+        el.appendChild(table);
+      }
+
+      async function refresh(){
+        document.getElementById('health').textContent = 'Loading...';
+        document.getElementById('stats').textContent = 'Loading...';
+        document.getElementById('aqiContainer').textContent = 'Loading...';
+        const [h,s,a] = await Promise.all([
+          fetchJson('/api/health'),
+          fetchJson('/api/stats'),
+          fetchJson('/api/aqidata')
+        ]);
+        renderHealth(h);
+        renderStats(s);
+        renderAqi(a);
+      }
+
+      document.getElementById('refresh').addEventListener('click', refresh);
+      // Auto-refresh on load
+      refresh();
+    </script>
   </body>
 </html>
