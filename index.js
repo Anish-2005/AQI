@@ -6,6 +6,7 @@ const cron = require("node-cron");
 const fetchData = require("./data.js");
 const { storePollutantData, storeAQIData, allAQI } = require("./db.js");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
 
@@ -89,7 +90,31 @@ app.get("/api/stats", async (req, res) => {
 
 // --- Home Route (serves index.html for SPA frontend) ---
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/public/index.html"));
+  const indexPath = path.join(__dirname, "../frontend/public/index.html");
+  try {
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    // Fallback HTML when the frontend build/index.html is not present
+    res.status(200).type("html").send(`<!doctype html>
+      <html><head><meta charset="utf-8"><title>AQI API</title>
+      <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <style>body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#f7f9fc;color:#0b1220;padding:24px}
+      h1{margin-top:0} a{color:#0366d6}</style></head>
+      <body>
+        <h1>AQI API — Status</h1>
+        <p>The frontend build is not found. The API is still available at the endpoints below.</p>
+        <ul>
+          <li><a href="/api/health">GET /api/health</a></li>
+          <li><a href="/api/aqidata">GET /api/aqidata</a></li>
+          <li><a href="/api/stats">GET /api/stats</a></li>
+        </ul>
+        <p>To remove this message, add your frontend build to <strong>frontend/public/index.html</strong>.</p>
+      </body></html>`);
+  } catch (err) {
+    console.error("Error serving index.html fallback:", err);
+    res.status(500).json({ error: "Internal server error", message: err.message });
+  }
 });
 
 // --- 404 Handler for Undefined API Routes ---
