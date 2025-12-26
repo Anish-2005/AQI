@@ -134,9 +134,6 @@ The server will start on `http://localhost:8080` (or your specified PORT).
 
 ## Project Structure 📁
 
-```
-backend/
-├── index.js           # Main server file with Express setup and routes
 ├── data.js            # Data fetching logic from government API
 ├── db.js              # Database operations and data storage
 ├── aqiCalculator.js   # AQI calculation algorithms
